@@ -7,11 +7,14 @@ local vim_plug = require("map-list.source-providers.vim-plug")
 local M = {}
 
 local package_providers = {
+  -- Product decision: source provider order is fixed so package-manager
+  -- ownership always beats generic callback or rhs fallbacks.
   { name = "lazy", provider = lazy },
   { name = "vim-plug", provider = vim_plug },
   { name = "packer", provider = packer },
 }
 
+--- Builds reusable source-provider context for the current render pass.
 function M.context()
   local context = {}
 
@@ -27,6 +30,7 @@ function M.context()
   return context
 end
 
+--- Resolves a keymap source using package managers, then callback, then rhs.
 function M.resolve(map, mode, context)
   for _, item in ipairs(package_providers) do
     local name = item.name

@@ -1,5 +1,6 @@
 local M = {}
 
+--- Extracts a readable source location from a Lua callback function.
 local function callback_source(callback)
   if callback == nil then
     return nil
@@ -26,6 +27,7 @@ local function callback_source(callback)
   return source
 end
 
+--- Resolves Lua callback keymaps to file and line source text.
 function M.resolve(map)
   local source = callback_source(map.callback)
   if source ~= nil then

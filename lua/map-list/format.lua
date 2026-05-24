@@ -2,6 +2,7 @@ local colors = require("map-list.colors")
 
 local M = {}
 
+--- Truncates text on the right without exceeding display width.
 local function truncate(text, width)
   if width <= 0 then
     return ""
@@ -34,6 +35,7 @@ local function truncate(text, width)
   return out .. "..."
 end
 
+--- Truncates text on the left without exceeding display width.
 local function truncate_left(text, width)
   if width <= 0 then
     return ""
@@ -66,18 +68,22 @@ local function truncate_left(text, width)
   return "..." .. out
 end
 
+--- Formats a source column value for the available display width.
 local function source_display(source, width)
   if source == "<Lua function>" then
     return truncate(source, width)
   end
 
   if source:find("/", 1, true) ~= nil or source:find(":", 1, true) ~= nil then
+    -- File paths and line references are usually most useful at the tail,
+    -- where the filename and line number live.
     return truncate_left(source, width)
   end
 
   return truncate(source, width)
 end
 
+--- Pads text to a fixed display width.
 local function pad(text, width)
   local padding = width - vim.fn.strdisplaywidth(text)
   if padding <= 0 then
@@ -87,6 +93,7 @@ local function pad(text, width)
   return text .. string.rep(" ", padding)
 end
 
+--- Finds the widest row value for a column with a minimum fallback.
 local function max_width(rows, key, fallback)
   local width = fallback
 
@@ -97,6 +104,7 @@ local function max_width(rows, key, fallback)
   return width
 end
 
+--- Converts collected keymap rows into aligned display lines and highlights.
 function M.rows(rows, config)
   if #rows == 0 then
     return { "No matching keymaps." }, {}
@@ -108,6 +116,8 @@ function M.rows(rows, config)
   local desc_width =
     math.min(max_width(rows, "desc", 4), math.floor(columns * 0.35))
   local fixed_width = mode_width + 2 + lhs_width + 2 + desc_width + 2
+  -- The source column is the least predictable column, so descriptions are
+  -- capped first and any remaining width is left for source attribution.
   local source_width = math.max(columns - fixed_width, 12)
   local lines = {}
   local highlights = {}

@@ -4,6 +4,7 @@ local source_registry = require("map-list.source-registry")
 local M = {}
 local default_modes = { "n", "v", "x", "s", "o", "i", "c", "t" }
 
+--- Checks whether a keymap matches the current filter.
 local function include_map(map, filter)
   if filter == nil then
     return true
@@ -34,6 +35,7 @@ local function include_map(map, filter)
     or haystack:find(filter.display, 1, true) ~= nil
 end
 
+--- Builds a case-aware sort key that orders lowercase before uppercase.
 local function sort_key(text)
   return text:gsub(".", function(char)
     if char:match("%a") then
@@ -47,12 +49,14 @@ local function sort_key(text)
   end)
 end
 
+--- Resolves the source label and kind for a keymap.
 local function map_source(map, mode, source_context)
   local source, source_kind = source_registry.resolve(map, mode, source_context)
 
   return source or "<Lua function>", source_kind or "rhs"
 end
 
+--- Adds one collected keymap row to the result list.
 local function append_map(rows, map, mode_label, mode_key, source_context)
   local source, source_kind = map_source(map, mode_key, source_context)
 
@@ -65,6 +69,7 @@ local function append_map(rows, map, mode_label, mode_key, source_context)
   })
 end
 
+--- Sorts rows by lhs, then exact lhs text, then mode.
 local function sort_rows(rows)
   table.sort(rows, function(a, b)
     local a_lhs = sort_key(a.lhs)
@@ -82,6 +87,7 @@ local function sort_rows(rows)
   end)
 end
 
+--- Normalizes a configured mode entry into API key and display label.
 local function mode_spec(mode)
   if type(mode) == "table" then
     return mode.key, mode.label or mode.key
@@ -90,6 +96,7 @@ local function mode_spec(mode)
   return mode, mode
 end
 
+--- Collects global and configured buffer-local keymaps into display rows.
 function M.collect(filter, config)
   local rows = {}
   local current_buf = vim.api.nvim_get_current_buf()

@@ -3,6 +3,7 @@ local format = require("map-list.format")
 local M = {}
 local namespace = vim.api.nvim_create_namespace("map-list")
 
+--- Dims visible leader tokens in the rendered lhs column.
 local function dim_lhs_leaders(buf, lines)
   for line_number, line in ipairs(lines) do
     local search_start = 1
@@ -34,6 +35,7 @@ local function dim_lhs_leaders(buf, lines)
   end
 end
 
+--- Applies precomputed extmark highlights to the output buffer.
 local function apply_highlights(buf, highlights)
   for _, highlight in ipairs(highlights) do
     vim.api.nvim_buf_set_extmark(
@@ -49,12 +51,14 @@ local function apply_highlights(buf, highlights)
   end
 end
 
+--- Writes rendered lines to Neovim messages.
 local function print_messages(lines)
   for _, line in ipairs(lines) do
     vim.cmd.echomsg(vim.fn.string(line))
   end
 end
 
+--- Opens the configured output target and renders keymap rows into it.
 function M.open(rows, config)
   local lines, highlights = format.rows(rows, config)
 

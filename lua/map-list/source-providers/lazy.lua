@@ -3,6 +3,7 @@ local plugin_path = require("map-list.source-providers.plugin-path")
 
 local M = {}
 
+--- Expands a lazy.nvim key spec mode into Neovim map modes.
 local function key_modes(key)
   local mode = key.mode or "n"
 
@@ -25,6 +26,7 @@ local function key_modes(key)
   return expanded
 end
 
+--- Builds lazy.nvim key-spec and plugin-path lookup context.
 function M.context()
   local ok, lazy_config = pcall(require, "lazy.core.config")
   if not ok then
@@ -49,6 +51,8 @@ function M.context()
         local normalized_lhs = keys.normalize_lhs(lhs)
 
         for _, mode in ipairs(key_modes(key)) do
+          -- lazy.nvim key specs are the strongest signal because they encode
+          -- the user's intent before a mapping is materialized in Neovim.
           sources.keys[mode .. "\0" .. normalized_lhs] = plugin.name
             or plugin_name
         end
@@ -61,12 +65,15 @@ function M.context()
   return sources
 end
 
+--- Resolves a keymap to its lazy.nvim owning plugin when possible.
 function M.resolve(map, mode, context)
   local plugin = context.keys and context.keys[mode .. "\0" .. (map.lhs or "")]
   if plugin ~= nil then
     return plugin, "plugin"
   end
 
+  -- Some mappings are created by plugin code instead of lazy key specs, so
+  -- fall back to the same path/command inference used by other managers.
   return plugin_path.resolve(map, context.path or {})
 end
 

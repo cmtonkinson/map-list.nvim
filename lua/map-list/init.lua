@@ -25,6 +25,7 @@ local state = {
   config = vim.deepcopy(defaults),
 }
 
+--- Normalizes a user command filter into raw and display search forms.
 local function normalize_filter(filter)
   if filter == nil or filter == "" then
     return nil
@@ -41,11 +42,13 @@ local function normalize_filter(filter)
   }
 end
 
+--- Renders the keymap list for the current command invocation.
 function M.show(opts)
   local filter = normalize_filter(opts and opts.args or nil)
   render.open(maps.collect(filter, state.config), state.config)
 end
 
+--- Configures map-list and creates the user command.
 function M.setup(opts)
   state.config =
     vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
