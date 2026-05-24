@@ -13,6 +13,8 @@ if vim.fn.filereadable(plug) == 0 then
 end
 
 vim.cmd.source(vim.fn.fnameescape(plug))
+vim.opt.runtimepath:prepend(repo)
+require("map-list.source-location").enable_tracking()
 
 common.setup_basics()
 

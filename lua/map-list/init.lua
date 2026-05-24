@@ -1,6 +1,7 @@
 local keys = require("map-list.keys")
 local maps = require("map-list.maps")
 local render = require("map-list.render")
+local source_location = require("map-list.source-location")
 
 local M = {}
 
@@ -13,6 +14,7 @@ local defaults = {
   include_buffer_local = true,
   buffer_local_marker = "@",
   collapse_modes = true,
+  show_rhs_source = true,
   modes = { "n", "v", "x", "s", "o", "i", "c", "t" },
   colors = {
     min_normal_distance = 45,
@@ -51,6 +53,8 @@ end
 
 --- Configures map-list and creates the user command.
 function M.setup(opts)
+  source_location.enable_tracking()
+
   state.config =
     vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
 

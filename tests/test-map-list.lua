@@ -470,6 +470,54 @@ T["renders callback sources as file and line references"] = function()
   expect_match(line, "%[string")
 end
 
+T["renders rhs source references when available"] = function()
+  child.lua([[
+    vim.o.columns = 180
+    local path = vim.fn.tempname() .. "-map-list-rhs-source.vim"
+    vim.fn.writefile({
+      "nnoremap maplistrhssource <Cmd>echo 'rhs-source'<CR>",
+    }, path)
+    vim.cmd("source " .. vim.fn.fnameescape(path))
+  ]])
+
+  local line = contains(map_lines("Map maplistrhssource"), "maplistrhssource")
+
+  contains({ line }, "<Cmd>echo 'rhs-source'<CR>")
+  expect_match(line, "map%-list%-rhs%-source%.vim:1")
+end
+
+T["renders tracked Lua rhs source references"] = function()
+  child.lua([[
+    vim.o.columns = 180
+    vim.keymap.set("n", "maplistrhsluaref", "<Cmd>echo 'rhs-lua'<CR>", {
+      desc = "Map List RHS Lua Reference",
+    })
+  ]])
+
+  local line = contains(map_lines("Map maplistrhsluaref"), "maplistrhsluaref")
+
+  contains({ line }, "<Cmd>echo 'rhs-lua'<CR>")
+  expect_match(line, "<nvim>:")
+end
+
+T["can hide rhs source references"] = function()
+  child.lua([[
+    vim.o.columns = 180
+    require("map-list").setup({ show_rhs_source = false })
+
+    local path = vim.fn.tempname() .. "-map-list-rhs-hidden.vim"
+    vim.fn.writefile({
+      "nnoremap maplistrhshidden <Cmd>echo 'rhs-hidden'<CR>",
+    }, path)
+    vim.cmd("source " .. vim.fn.fnameescape(path))
+  ]])
+
+  local line = contains(map_lines("Map maplistrhshidden"), "maplistrhshidden")
+
+  contains({ line }, "<Cmd>echo 'rhs-hidden'<CR>")
+  rejects({ line }, "map-list-rhs-hidden.vim:1")
+end
+
 T["marks leader text and callback sources with Comment highlights"] = function()
   child.lua([[
     vim.keymap.set("n", "<leader>maplisthl", function() end, {
@@ -737,6 +785,46 @@ T["format.rows returns plugin and callback highlight spans"] = function()
   contains(result.lines, "callback-source.lua:42")
   eq(result.plugin_count >= 2, true)
   eq(result.callback_count, 1)
+end
+
+T["format.rows appends and dims rhs source references"] = function()
+  local result = child.lua([[
+    vim.o.columns = 120
+
+    local lines, highlights = require("map-list.format").rows({
+      {
+        mode = "n",
+        lhs = "maplistformatrhsref",
+        desc = "Map List Format RHS Reference",
+        source = "<Cmd>echo 'x'<CR>",
+        source_kind = "rhs",
+        source_ref = "/tmp/map-list/config.lua:123",
+      },
+    }, {
+      color = true,
+      colors = {
+        min_normal_distance = 0,
+        min_comment_distance = 0,
+        min_background_contrast = 0,
+      },
+    })
+
+    local comment_count = 0
+    for _, highlight in ipairs(highlights) do
+      if highlight.group == "Comment" then
+        comment_count = comment_count + 1
+      end
+    end
+
+    return {
+      line = lines[1],
+      comment_count = comment_count,
+    }
+  ]])
+
+  contains({ result.line }, "<Cmd>echo 'x'<CR>")
+  contains({ result.line }, "config.lua:123")
+  eq(result.comment_count, 1)
 end
 
 T["format.rows truncates paths from left and names from right"] = function()

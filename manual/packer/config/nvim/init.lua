@@ -19,6 +19,8 @@ end
 
 vim.opt.runtimepath:prepend(packer_path)
 vim.opt.packpath:prepend(vim.fn.stdpath("data") .. "/site")
+vim.opt.runtimepath:prepend(repo)
+require("map-list.source-location").enable_tracking()
 
 common.setup_basics()
 
@@ -54,7 +56,6 @@ for _, plugin in ipairs({
   end
 end
 
-vim.opt.runtimepath:prepend(repo)
 vim.cmd.runtime("plugin/map-list.lua")
 vim.cmd.runtime("plugin/align.vim")
 vim.cmd.runtime("plugin/comment.lua")

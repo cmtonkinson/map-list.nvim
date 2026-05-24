@@ -14,6 +14,8 @@ if vim.fn.isdirectory(lazypath) == 0 then
 end
 
 vim.opt.runtimepath:prepend(lazypath)
+vim.opt.runtimepath:prepend(repo)
+require("map-list.source-location").enable_tracking()
 
 common.setup_basics()
 

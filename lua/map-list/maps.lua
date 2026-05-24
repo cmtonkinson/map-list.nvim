@@ -1,4 +1,5 @@
 local keys = require("map-list.keys")
+local source_location = require("map-list.source-location")
 local source_registry = require("map-list.source-registry")
 
 local M = {}
@@ -76,6 +77,7 @@ local function append_map(
     desc = map.desc or "",
     source = source,
     source_kind = source_kind,
+    source_ref = source_location.map(map, mode_key),
   })
 end
 
@@ -90,6 +92,7 @@ local function collapse_rows(rows)
       row.desc,
       row.source,
       row.source_kind,
+      row.source_kind == "rhs" and row.source_ref or "",
       row.mode_suffix,
     }, "\0")
     local existing = by_key[key]
