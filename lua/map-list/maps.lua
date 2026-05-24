@@ -47,28 +47,14 @@ local function sort_key(text)
   end)
 end
 
-local function map_source(map, mode, config, source_context)
-  for _, provider in ipairs(config.source_providers) do
-    local source, source_kind =
-      source_registry.resolve(provider, map, mode, source_context)
+local function map_source(map, mode, source_context)
+  local source, source_kind = source_registry.resolve(map, mode, source_context)
 
-    if source ~= nil then
-      return source, source_kind
-    end
-  end
-
-  return "<Lua function>", "rhs"
+  return source or "<Lua function>", source_kind or "rhs"
 end
 
-local function append_map(
-  rows,
-  map,
-  mode_label,
-  mode_key,
-  config,
-  source_context
-)
-  local source, source_kind = map_source(map, mode_key, config, source_context)
+local function append_map(rows, map, mode_label, mode_key, source_context)
+  local source, source_kind = map_source(map, mode_key, source_context)
 
   table.insert(rows, {
     mode = mode_label,
@@ -116,7 +102,7 @@ function M.collect(filter, config)
 
     for _, map in ipairs(vim.api.nvim_get_keymap(mode_key)) do
       if include_map(map, filter) then
-        append_map(rows, map, mode_label, mode_key, config, source_context)
+        append_map(rows, map, mode_label, mode_key, source_context)
       end
     end
 
@@ -128,7 +114,6 @@ function M.collect(filter, config)
             map,
             mode_label .. buffer_local_marker,
             mode_key,
-            config,
             source_context
           )
         end

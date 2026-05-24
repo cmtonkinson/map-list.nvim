@@ -1,0 +1,15 @@
+{
+  "workspace.ignoreDir": [
+    ".git",
+    ".deps",
+    "manual/lazy/cache",
+    "manual/lazy/data",
+    "manual/lazy/state",
+    "manual/packer/cache",
+    "manual/packer/data",
+    "manual/packer/state",
+    "manual/vim-plug/cache",
+    "manual/vim-plug/data",
+    "manual/vim-plug/state"
+  ]
+}

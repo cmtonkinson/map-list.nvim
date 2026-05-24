@@ -1,4 +1,5 @@
 local keys = require("map-list.keys")
+local plugin_path = require("map-list.source-providers.plugin-path")
 
 local M = {}
 
@@ -30,31 +31,43 @@ function M.context()
     return {}
   end
 
-  local sources = {}
+  local sources = {
+    keys = {},
+    path = {},
+  }
+  local plugins = {}
 
   for plugin_name, plugin in pairs(lazy_config.plugins) do
+    table.insert(plugins, {
+      name = plugin.name or plugin_name,
+      dir = plugin.dir,
+    })
+
     for _, key in ipairs(plugin.keys or {}) do
       local lhs = key[1]
       if type(lhs) == "string" then
         local normalized_lhs = keys.normalize_lhs(lhs)
 
         for _, mode in ipairs(key_modes(key)) do
-          sources[mode .. "\0" .. normalized_lhs] = plugin.name or plugin_name
+          sources.keys[mode .. "\0" .. normalized_lhs] = plugin.name
+            or plugin_name
         end
       end
     end
   end
 
+  sources.path = plugin_path.context(plugins)
+
   return sources
 end
 
 function M.resolve(map, mode, context)
-  local plugin = context[mode .. "\0" .. (map.lhs or "")]
+  local plugin = context.keys and context.keys[mode .. "\0" .. (map.lhs or "")]
   if plugin ~= nil then
     return plugin, "plugin"
   end
 
-  return nil
+  return plugin_path.resolve(map, context.path or {})
 end
 
 return M

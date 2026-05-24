@@ -1,19 +1,24 @@
 local callback = require("map-list.source-providers.callback")
 local lazy = require("map-list.source-providers.lazy")
+local packer = require("map-list.source-providers.packer")
 local rhs = require("map-list.source-providers.rhs")
+local vim_plug = require("map-list.source-providers.vim-plug")
 
 local M = {}
 
-local providers = {
-  callback = callback,
-  lazy = lazy,
-  rhs = rhs,
+local package_providers = {
+  { name = "lazy", provider = lazy },
+  { name = "vim-plug", provider = vim_plug },
+  { name = "packer", provider = packer },
 }
 
 function M.context()
   local context = {}
 
-  for name, provider in pairs(providers) do
+  for _, item in ipairs(package_providers) do
+    local name = item.name
+    local provider = item.provider
+
     if provider.context ~= nil then
       context[name] = provider.context()
     end
@@ -22,16 +27,23 @@ function M.context()
   return context
 end
 
-function M.resolve(provider, map, mode, context)
-  if type(provider) == "function" then
-    return provider(map, mode, context)
+function M.resolve(map, mode, context)
+  for _, item in ipairs(package_providers) do
+    local name = item.name
+    local provider = item.provider
+    local source, source_kind = provider.resolve(map, mode, context[name] or {})
+
+    if source ~= nil then
+      return source, source_kind
+    end
   end
 
-  if providers[provider] ~= nil then
-    return providers[provider].resolve(map, mode, context[provider] or {})
+  local source, source_kind = callback.resolve(map)
+  if source ~= nil then
+    return source, source_kind
   end
 
-  return nil
+  return rhs.resolve(map)
 end
 
 return M

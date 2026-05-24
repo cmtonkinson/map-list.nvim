@@ -6,7 +6,6 @@ local M = {}
 
 local defaults = {
   command = "Map",
-  source_providers = { "lazy", "callback", "rhs" },
   color = true,
   output = "buffer",
   window_command = "botright new",

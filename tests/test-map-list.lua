@@ -179,9 +179,7 @@ T["maps.collect returns sorted rows with buffer markers and fallback sources"] =
       raw = "maplistcollect",
       display = "maplistcollect",
       has_space = false,
-    }, {
-      source_providers = { "missing" },
-    })
+    }, {})
   ]])
 
   eq(rows[1].desc, "Map List Collect Lower")
@@ -198,12 +196,12 @@ T["maps.collect returns sorted rows with buffer markers and fallback sources"] =
   no_error(function()
     assert(buffer_row ~= nil)
     assert(buffer_row.mode == "n@")
-    assert(buffer_row.source == "<Lua function>")
-    assert(buffer_row.source_kind == "rhs")
+    assert(buffer_row.source:find("[string", 1, true) ~= nil)
+    assert(buffer_row.source_kind == "callback")
   end)
 end
 
-T["maps.collect passes map mode and context to custom providers"] = function()
+T["maps.collect resolves package provider sources"] = function()
   local result = child.lua([[
     local maps = require("map-list.maps")
 
@@ -225,39 +223,20 @@ T["maps.collect passes map mode and context to custom providers"] = function()
       desc = "Map List Context",
     })
 
-    local provider_args = nil
     local rows = maps.collect({
       raw = "maplistcontext",
       display = "maplistcontext",
       has_space = false,
-    }, {
-      source_providers = {
-        function(map, mode, context)
-          provider_args = {
-            lhs = map.lhs,
-            mode = mode,
-            plugin = context.lazy["n\0maplistcontext"],
-          }
-
-          return "context-source.nvim", "plugin"
-        end,
-      },
-    })
+    }, {})
 
     return {
-      provider_args,
       rows[1].source,
       rows[1].source_kind,
     }
   ]])
 
   eq(result, {
-    {
-      lhs = "maplistcontext",
-      mode = "n",
-      plugin = "contextual.nvim",
-    },
-    "context-source.nvim",
+    "contextual.nvim",
     "plugin",
   })
 end
@@ -479,38 +458,41 @@ T["lazy provider attributes matching key specs to plugins"] = function()
   contains(lines, "fallback")
 end
 
-T["source provider order and removal are configurable"] = function()
+T["source providers use fixed package callback rhs order"] = function()
   child.lua([[
-    require("map-list").setup({
-      source_providers = {
-        function()
-          return "custom-source.nvim", "plugin"
-        end,
-        "rhs",
-      },
-    })
+    package.loaded["lazy.core.config"] = nil
+    package.preload["lazy.core.config"] = function()
+      return {
+        plugins = {
+          fixed = {
+            name = "fixed-source.nvim",
+            keys = {
+              { "maplistfixedsource", mode = "n" },
+            },
+          },
+        },
+      }
+    end
 
-    vim.keymap.set("n", "maplistcustomsource", "<Cmd>echo 'x'<CR>", {
-      desc = "Map List Test Custom Source",
-    })
-  ]])
-
-  contains(map_lines("Map maplistcustomsource"), "custom-source.nvim")
-
-  child.lua([[
-    require("map-list").setup({
-      source_providers = { "rhs" },
-    })
-
-    vim.keymap.set("n", "maplistrhsonly", function() end, {
-      desc = "Map List Test RHS Only",
+    vim.keymap.set("n", "maplistfixedsource", function() end, {
+      desc = "Map List Test Fixed Source",
     })
   ]])
 
   local line =
-    contains(map_lines("Map maplistrhsonly"), "Map List Test RHS Only")
-  contains({ line }, "<Lua function>")
+    contains(map_lines("Map maplistfixedsource"), "Map List Test Fixed Source")
+  contains({ line }, "fixed-source.nvim")
   rejects({ line }, "[string")
+
+  child.lua([[
+    vim.keymap.set("n", "maplistrhsonly", "<Cmd>echo 'x'<CR>", {
+      desc = "Map List Test RHS Only",
+    })
+  ]])
+
+  local rhs_line =
+    contains(map_lines("Map maplistrhsonly"), "Map List Test RHS Only")
+  contains({ rhs_line }, "<Cmd>echo 'x'<CR>")
 end
 
 T["renders callback sources as file and line references"] = function()
@@ -563,12 +545,20 @@ T["applies plugin highlights to rendered plugin rows"] = function()
         min_comment_distance = 0,
         min_background_contrast = 0,
       },
-      source_providers = {
-        function()
-          return "highlight-source.nvim", "plugin"
-        end,
-      },
     })
+    package.loaded["lazy.core.config"] = nil
+    package.preload["lazy.core.config"] = function()
+      return {
+        plugins = {
+          highlight = {
+            name = "highlight-source.nvim",
+            keys = {
+              { "maplistpluginhighlight", mode = "n" },
+            },
+          },
+        },
+      }
+    end
 
     vim.keymap.set("n", "maplistpluginhighlight", function() end, {
       desc = "Map List Test Plugin Highlight",
@@ -599,17 +589,25 @@ T["color output can be disabled"] = function()
   local mark_count = child.lua([[
     require("map-list").setup({
       color = false,
-      source_providers = {
-        function()
-          return "no-color-plugin.nvim", "plugin"
-        end,
-      },
       colors = {
         min_normal_distance = 0,
         min_comment_distance = 0,
         min_background_contrast = 0,
       },
     })
+    package.loaded["lazy.core.config"] = nil
+    package.preload["lazy.core.config"] = function()
+      return {
+        plugins = {
+          no_color = {
+            name = "no-color-plugin.nvim",
+            keys = {
+              { "<leader>maplistnocolor", mode = "n" },
+            },
+          },
+        },
+      }
+    end
 
     vim.keymap.set("n", "<leader>maplistnocolor", function() end, {
       desc = "Map List No Color",
@@ -889,39 +887,33 @@ T["lazy provider is inert when lazy.nvim is unavailable"] = function()
   eq(result, { true })
 end
 
-T["source registry dispatches named function and missing providers"] = function()
+T["source registry resolves callback then rhs fallbacks"] = function()
   local result = child.lua([[
     local registry = require("map-list.source-registry")
+    local context = registry.context()
 
-    local rhs_source, rhs_kind = registry.resolve("rhs", {
+    local function callback_fixture() end
+    local callback_source, callback_kind = registry.resolve({
+      callback = callback_fixture,
+      rhs = "<Cmd>echo 'callback'<CR>",
+    }, "n", context)
+
+    local rhs_source, rhs_kind = registry.resolve({
       rhs = "<Cmd>echo 'registry'<CR>",
-    }, "n", {})
-
-    local fn_source, fn_kind = registry.resolve(function(map, mode, context)
-      return table.concat({ map.lhs, mode, context.marker }, ":"), "custom"
-    end, {
-      lhs = "maplistregistry",
-    }, "x", {
-      marker = "context",
-    })
-
-    local missing_source = registry.resolve("missing", {}, "n", {})
+    }, "n", context)
 
     return {
+      callback_source,
+      callback_kind,
       rhs_source,
       rhs_kind,
-      fn_source,
-      fn_kind,
-      missing_source,
     }
   ]])
 
-  eq(result, {
-    "<Cmd>echo 'registry'<CR>",
-    "rhs",
-    "maplistregistry:x:context",
-    "custom",
-  })
+  expect_match(result[1], "%[string")
+  eq(result[2], "callback")
+  eq(result[3], "<Cmd>echo 'registry'<CR>")
+  eq(result[4], "rhs")
 end
 
 T["source registry builds provider-specific context"] = function()
@@ -943,13 +935,96 @@ T["source registry builds provider-specific context"] = function()
     local context = require("map-list.source-registry").context()
 
     return {
-      context.lazy["n\0maplistregistrycontext"],
-      context.rhs == nil,
-      context.callback == nil,
+      context.lazy.keys["n\0maplistregistrycontext"],
+      type(context["vim-plug"]) == "table",
+      type(context.packer) == "table",
     }
   ]])
 
   eq(result, { "registry.nvim", true, true })
+end
+
+T["vim-plug provider attributes command and callback maps to plugins"] = function()
+  local result = child.lua([[
+    local root = vim.fn.tempname()
+    local plugin_dir = root .. "/plugged/fake.nvim"
+    vim.fn.mkdir(plugin_dir .. "/plugin", "p")
+    vim.fn.mkdir(plugin_dir .. "/lua", "p")
+    vim.fn.writefile({
+      'vim.api.nvim_create_user_command("FakeLua", function() end, {})',
+      'vim.keymap.set("n", "<Plug>(fake-action)", function() end)',
+    }, plugin_dir .. "/plugin/fake.lua")
+    vim.fn.writefile({
+      "local M = {}",
+      "function M.action() end",
+      "return M",
+    }, plugin_dir .. "/lua/fake_callback.lua")
+
+    vim.g.plugs = {
+      ["fake.nvim"] = {
+        dir = plugin_dir,
+      },
+    }
+
+    local provider = require("map-list.source-providers.vim-plug")
+    local context = provider.context()
+    package.path = plugin_dir .. "/lua/?.lua;" .. package.path
+
+    local command_source, command_kind = provider.resolve({
+      rhs = "<Cmd>FakeLua<CR>",
+    }, "n", context)
+    local plug_source, plug_kind = provider.resolve({
+      rhs = "<Plug>(fake-action)",
+    }, "n", context)
+    local callback_source, callback_kind = provider.resolve({
+      callback = require("fake_callback").action,
+    }, "n", context)
+
+    return {
+      command_source,
+      command_kind,
+      plug_source,
+      plug_kind,
+      callback_source,
+      callback_kind,
+    }
+  ]])
+
+  eq(result, {
+    "fake.nvim",
+    "plugin",
+    "fake.nvim",
+    "plugin",
+    "fake.nvim",
+    "plugin",
+  })
+end
+
+T["packer provider attributes command maps to plugins"] = function()
+  local result = child.lua([[
+    local root = vim.fn.tempname()
+    local plugin_dir = root .. "/site/pack/packer/start/fake-packer.nvim"
+    vim.fn.mkdir(plugin_dir .. "/plugin", "p")
+    vim.fn.writefile({
+      "command! FakePacker echo 'packer'",
+    }, plugin_dir .. "/plugin/fake.vim")
+
+    _G.packer_plugins = {
+      ["fake-packer.nvim"] = {
+        path = plugin_dir,
+      },
+    }
+
+    local provider = require("map-list.source-providers.packer")
+    local context = provider.context()
+    local source, kind = provider.resolve({
+      rhs = "<Cmd>FakePacker<CR>",
+    }, "n", context)
+
+    return { source, kind }
+  ]])
+
+  eq(result, { "fake-packer.nvim", "plugin" })
 end
 
 T["theme color grouping creates plugin highlight groups"] = function()
