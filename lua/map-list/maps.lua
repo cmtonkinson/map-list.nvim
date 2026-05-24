@@ -2,17 +2,7 @@ local keys = require("map-list.keys")
 local source_registry = require("map-list.source-registry")
 
 local M = {}
-
-local modes = {
-  { key = "n", label = "n" },
-  { key = "v", label = "v" },
-  { key = "x", label = "x" },
-  { key = "s", label = "s" },
-  { key = "o", label = "o" },
-  { key = "i", label = "i" },
-  { key = "c", label = "c" },
-  { key = "t", label = "t" },
-}
+local default_modes = { "n", "v", "x", "s", "o", "i", "c", "t" }
 
 local function include_map(map, filter)
   if filter == nil then
@@ -106,28 +96,42 @@ local function sort_rows(rows)
   end)
 end
 
+local function mode_spec(mode)
+  if type(mode) == "table" then
+    return mode.key, mode.label or mode.key
+  end
+
+  return mode, mode
+end
+
 function M.collect(filter, config)
   local rows = {}
   local current_buf = vim.api.nvim_get_current_buf()
   local source_context = source_registry.context()
+  local modes = config.modes or default_modes
+  local buffer_local_marker = config.buffer_local_marker or "@"
 
   for _, mode in ipairs(modes) do
-    for _, map in ipairs(vim.api.nvim_get_keymap(mode.key)) do
+    local mode_key, mode_label = mode_spec(mode)
+
+    for _, map in ipairs(vim.api.nvim_get_keymap(mode_key)) do
       if include_map(map, filter) then
-        append_map(rows, map, mode.label, mode.key, config, source_context)
+        append_map(rows, map, mode_label, mode_key, config, source_context)
       end
     end
 
-    for _, map in ipairs(vim.api.nvim_buf_get_keymap(current_buf, mode.key)) do
-      if include_map(map, filter) then
-        append_map(
-          rows,
-          map,
-          mode.label .. "@",
-          mode.key,
-          config,
-          source_context
-        )
+    if config.include_buffer_local ~= false then
+      for _, map in ipairs(vim.api.nvim_buf_get_keymap(current_buf, mode_key)) do
+        if include_map(map, filter) then
+          append_map(
+            rows,
+            map,
+            mode_label .. buffer_local_marker,
+            mode_key,
+            config,
+            source_context
+          )
+        end
       end
     end
   end

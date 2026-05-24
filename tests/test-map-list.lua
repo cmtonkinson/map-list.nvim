@@ -345,6 +345,62 @@ T["marks buffer-local mappings with at-sign mode suffix"] = function()
   expect_match(contains(lines, "Map List Test Buffer"), "^n@%s+")
 end
 
+T["can exclude buffer-local mappings"] = function()
+  child.lua([[
+    require("map-list").setup({ include_buffer_local = false })
+
+    vim.keymap.set("n", "maplistbufferconfigglobal", function() end, {
+      desc = "Map List Global",
+    })
+    vim.keymap.set("n", "maplistbufferconfiglocal", function() end, {
+      buffer = true,
+      desc = "Map List Local",
+    })
+  ]])
+
+  local lines = map_lines("Map maplistbufferconfig")
+
+  contains(lines, "Map List Global")
+  rejects(lines, "Map List Local")
+end
+
+T["can configure buffer-local marker"] = function()
+  child.lua([[
+    require("map-list").setup({ buffer_local_marker = "*" })
+
+    vim.keymap.set("n", "maplistbuffermarker", function() end, {
+      buffer = true,
+      desc = "Map List Buffer Marker",
+    })
+  ]])
+
+  local lines = map_lines("Map maplistbuffermarker")
+
+  expect_match(contains(lines, "Map List Buffer Marker"), "^n%*%s+")
+end
+
+T["can configure collected modes"] = function()
+  child.lua([[
+    require("map-list").setup({
+      modes = {
+        { key = "n", label = "normal" },
+      },
+    })
+
+    vim.keymap.set("n", "maplistmodeconfig", function() end, {
+      desc = "Map List Mode Config Normal",
+    })
+    vim.keymap.set("i", "maplistmodeconfig", function() end, {
+      desc = "Map List Mode Config Insert",
+    })
+  ]])
+
+  local lines = map_lines("Map maplistmodeconfig")
+
+  expect_match(contains(lines, "Map List Mode Config Normal"), "^normal%s+")
+  rejects(lines, "Map List Mode Config Insert")
+end
+
 T["sorts lhs case-insensitively with lowercase first"] = function()
   child.lua([[
     vim.keymap.set("n", "maplistcasea", function() end, {
@@ -539,6 +595,93 @@ T["applies plugin highlights to rendered plugin rows"] = function()
   eq(#groups > 0, true)
 end
 
+T["color output can be disabled"] = function()
+  local mark_count = child.lua([[
+    require("map-list").setup({
+      color = false,
+      source_providers = {
+        function()
+          return "no-color-plugin.nvim", "plugin"
+        end,
+      },
+      colors = {
+        min_normal_distance = 0,
+        min_comment_distance = 0,
+        min_background_contrast = 0,
+      },
+    })
+
+    vim.keymap.set("n", "<leader>maplistnocolor", function() end, {
+      desc = "Map List No Color",
+    })
+
+    vim.cmd("Map maplistnocolor")
+
+    local ns = vim.api.nvim_create_namespace("map-list")
+    local marks = vim.api.nvim_buf_get_extmarks(0, ns, 0, -1, { details = true })
+
+    vim.cmd("bwipeout!")
+
+    return #marks
+  ]])
+
+  eq(mark_count, 0)
+end
+
+T["can render command output as messages"] = function()
+  local result = child.lua([[
+    require("map-list").setup({ output = "messages" })
+
+    vim.keymap.set("n", "maplistmessages", function() end, {
+      desc = "Map List Messages",
+    })
+
+    local before_buf = vim.api.nvim_get_current_buf()
+    vim.cmd("Map maplistmessages")
+    local after_buf = vim.api.nvim_get_current_buf()
+
+    return {
+      before_buf == after_buf,
+      vim.bo[after_buf].buftype,
+      vim.api.nvim_exec2("messages", { output = true }).output,
+    }
+  ]])
+
+  eq(result[1], true)
+  eq(result[2], "")
+  contains({ result[3] }, "Map List Messages")
+end
+
+T["can configure buffer window command and name"] = function()
+  local result = child.lua([[
+    require("map-list").setup({
+      window_command = "enew",
+      buffer_name = "Configured Keymaps",
+    })
+
+    vim.keymap.set("n", "maplistbuffername", function() end, {
+      desc = "Map List Buffer Name",
+    })
+
+    local before_windows = #vim.api.nvim_list_wins()
+    vim.cmd("Map maplistbuffername")
+
+    local result = {
+      windows_unchanged = #vim.api.nvim_list_wins() == before_windows,
+      name = vim.api.nvim_buf_get_name(0),
+      buftype = vim.bo.buftype,
+    }
+
+    vim.cmd("bwipeout!")
+
+    return result
+  ]])
+
+  eq(result.windows_unchanged, true)
+  expect_match(result.name, "Configured Keymaps$")
+  eq(result.buftype, "nofile")
+end
+
 T["renders empty result message"] = function()
   eq(map_lines("Map maplistmissingneedle"), { "No matching keymaps." })
 end
@@ -557,6 +700,30 @@ T["format.rows renders empty rows without highlights"] = function()
   ]])
 
   eq(result, { { "No matching keymaps." }, {} })
+end
+
+T["format.rows uses a compact mode column"] = function()
+  local lines = child.lua([[
+    local lines = require("map-list.format").rows({
+      {
+        mode = "n",
+        lhs = "lhs",
+        desc = "desc",
+        source = "source",
+        source_kind = "rhs",
+      },
+    }, {
+      colors = {
+        min_normal_distance = 0,
+        min_comment_distance = 0,
+        min_background_contrast = 0,
+      },
+    })
+
+    return lines
+  ]])
+
+  eq(lines[1]:sub(1, 8), "n   lhs ")
 end
 
 T["format.rows returns plugin and callback highlight spans"] = function()
@@ -580,6 +747,7 @@ T["format.rows returns plugin and callback highlight spans"] = function()
         source_kind = "callback",
       },
     }, {
+      color = true,
       colors = {
         min_normal_distance = 0,
         min_comment_distance = 0,

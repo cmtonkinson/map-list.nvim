@@ -49,19 +49,32 @@ local function apply_highlights(buf, highlights)
   end
 end
 
+local function print_messages(lines)
+  for _, line in ipairs(lines) do
+    vim.cmd.echomsg(vim.fn.string(line))
+  end
+end
+
 function M.open(rows, config)
   local lines, highlights = format.rows(rows, config)
 
-  vim.cmd("botright new")
+  if config.output == "messages" then
+    print_messages(lines)
+    return
+  end
+
+  vim.cmd(config.window_command or "botright new")
 
   local buf = vim.api.nvim_get_current_buf()
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "map-list"
-  vim.api.nvim_buf_set_name(buf, "Keymaps")
+  vim.api.nvim_buf_set_name(buf, config.buffer_name or "Keymaps")
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  dim_lhs_leaders(buf, lines)
+  if config.color then
+    dim_lhs_leaders(buf, lines)
+  end
   apply_highlights(buf, highlights)
   vim.bo[buf].modifiable = false
   vim.wo.wrap = false

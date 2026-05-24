@@ -15,7 +15,7 @@ scratch buffer that can be searched normally.
 - lazy.nvim key specs show the owning plugin name when available.
 - Lua callbacks fall back to trimmed `file:line` source references.
 - Plugin-owned rows are color-grouped using colors derived from the active
-  colorscheme. *(color grouping inspired by [blame.nvim])*
+  colorscheme. *(color grouping algorithm inspired by [blame.nvim])*
 
 ## Installation
 With lazy.nvim:
@@ -25,7 +25,8 @@ With lazy.nvim:
 }
 ```
 
-The plugin creates `:Map` but does not add keymaps by default. I use:
+The plugin only creates the `:Map` user command. If you want a keybind, you can
+add it. I have mine mapped to `<leader>ml`:
 ```lua
 vim.keymap.set("n", "<leader>ml", "<cmd>Map <lt>leader><CR>", {
 	desc = "List leader keymaps",
@@ -39,15 +40,19 @@ vim.keymap.set("n", "<leader>ml", "<cmd>Map <lt>leader><CR>", {
 :Map rename
 ```
 
-Rows are sorted by lhs with case-insensitive ordering where lowercase comes
-before uppercase for the same letter.
-
 ## Configuration
 Defaults:
 ```lua
 require("map-list").setup({
 	command = "Map",
 	source_providers = { "lazy", "callback", "rhs" },
+	color = true,
+	output = "buffer",
+	window_command = "botright new",
+	buffer_name = "Keymaps",
+	include_buffer_local = true,
+	buffer_local_marker = "@",
+	modes = { "n", "v", "x", "s", "o", "i", "c", "t" },
 	colors = {
 		min_normal_distance = 45,
 		min_comment_distance = 35,
@@ -56,28 +61,30 @@ require("map-list").setup({
 })
 ```
 
-Source providers are tried in order:
-- `lazy`: optional lazy.nvim plugin-name lookup.
-- `callback`: Lua callback `file:line` via debug metadata.
-- `rhs`: command/string RHS fallback.
-
 Options:
-- `command`: name of the user command to create. The default is `Map`, so the
-  command is available as `:Map [filter]`. Set this if you want a different
-  command name, such as `Keymaps`.
-- `source_providers`: ordered list of strategies used to fill the source
-  column. The first provider that returns a source wins. Reordering this list
-  changes source precedence; removing a provider disables that fallback.
-- `colors.min_normal_distance`: minimum RGB distance between a plugin color and
-  the active `Normal` foreground. Increase this if plugin colors look too much
-  like ordinary text.
-- `colors.min_comment_distance`: minimum RGB distance between a plugin color and
-  the active `Comment` foreground. Increase this if plugin colors look too dim
-  or too similar to `<leader>` / callback source text.
-- `colors.min_background_contrast`: minimum contrast ratio between a plugin
-  color and the active `Normal` background. Increase this if plugin colors are
-  hard to read; decrease it if your theme has a small palette and too few colors
-  are being selected.
+
+| Name                             | Default                                      | Description                                                                                                               |
+|----------------------------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `command`                        | `"Map"`                                      | User command name. The default creates `:Map [filter]`; set this to rename the command, such as `"Keymaps"`.              |
+| `source_providers`               | `{ "lazy", "callback", "rhs" }`              | Ordered strategies for the source column. The first provider that returns a source wins.                                  |
+| `color`                          | `true`                                       | Add highlight groups/extmarks for plugin source groups, callback sources, and leader text.                                |
+| `output`                         | `"buffer"`                                   | Render target. Use `"buffer"` for the scratch buffer or `"messages"` for command-line message output similar to `:map`.   |
+| `window_command`                 | `"botright new"`                             | Command used to open the scratch buffer when `output = "buffer"`.                                                         |
+| `buffer_name`                    | `"Keymaps"`                                  | Scratch buffer name.                                                                                                      |
+| `include_buffer_local`           | `true`                                       | Include mappings local to the current buffer.                                                                             |
+| `buffer_local_marker`            | `"@"`                                        | Suffix added to the mode label for buffer-local mappings.                                                                 |
+| `modes`                          | `{ "n", "v", "x", "s", "o", "i", "c", "t" }` | Ordered modes to collect. Entries can be mode strings such as `"n"`, or tables such as `{ key = "n", label = "normal" }`. |
+| `colors.min_normal_distance`     | `45`                                         | Minimum RGB distance between a plugin color and the active `Normal` foreground.                                           |
+| `colors.min_comment_distance`    | `35`                                         | Minimum RGB distance between a plugin color and the active `Comment` foreground.                                          |
+| `colors.min_background_contrast` | `2.0`                                        | Minimum contrast ratio between a plugin color and the active `Normal` background.                                         |
+
+Built-in source providers:
+
+| Name       | Description                                  |
+|------------|----------------------------------------------|
+| `lazy`     | Optional lazy.nvim plugin-name lookup.       |
+| `callback` | Lua callback `file:line` via debug metadata. |
+| `rhs`      | Command/string RHS fallback.                 |
 
 Custom source providers can be functions:
 ```lua
@@ -93,8 +100,8 @@ require("map-list").setup({
 })
 ```
 
-Provider functions should return `source, source_kind`. Use
-`source_kind = "plugin"` to color-group rows by that source.
+Provider functions should return `source, source_kind`. Use `source_kind =
+"plugin"` to color-group rows by that source.
 
 ## Testing
 Run the headless test suite from the repository root:

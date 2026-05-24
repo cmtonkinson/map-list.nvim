@@ -103,7 +103,7 @@ function M.rows(rows, config)
   end
 
   local columns = vim.o.columns
-  local mode_width = max_width(rows, "mode", 4)
+  local mode_width = max_width(rows, "mode", 2)
   local lhs_width = math.min(max_width(rows, "lhs", 3), 28)
   local desc_width =
     math.min(max_width(rows, "desc", 4), math.floor(columns * 0.35))
@@ -111,7 +111,11 @@ function M.rows(rows, config)
   local source_width = math.max(columns - fixed_width, 12)
   local lines = {}
   local highlights = {}
-  local plugin_groups = colors.plugin_groups(rows, config.colors)
+  local plugin_groups = {}
+
+  if config.color then
+    plugin_groups = colors.plugin_groups(rows, config.colors)
+  end
 
   for _, row in ipairs(rows) do
     local desc = truncate(row.desc, desc_width)
@@ -147,7 +151,7 @@ function M.rows(rows, config)
       end
     end
 
-    if row.source_kind == "callback" then
+    if config.color and row.source_kind == "callback" then
       table.insert(highlights, {
         group = "Comment",
         line = #lines,
