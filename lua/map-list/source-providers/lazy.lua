@@ -1,15 +1,6 @@
+local keys = require("map-list.keys")
+
 local M = {}
-
-local function normalize_lhs(lhs)
-  local leader = vim.g.mapleader or "\\"
-  local localleader = vim.g.maplocalleader or "\\"
-
-  lhs = lhs:gsub("<[Ll]eader>", leader)
-  lhs = lhs:gsub("<[Ll]ocal[Ll]eader>", localleader)
-  lhs = lhs:gsub("<[Ss]pace>", " ")
-
-  return vim.api.nvim_replace_termcodes(lhs, true, true, true)
-end
 
 local function key_modes(key)
   local mode = key.mode or "n"
@@ -45,7 +36,7 @@ function M.context()
     for _, key in ipairs(plugin.keys or {}) do
       local lhs = key[1]
       if type(lhs) == "string" then
-        local normalized_lhs = normalize_lhs(lhs)
+        local normalized_lhs = keys.normalize_lhs(lhs)
 
         for _, mode in ipairs(key_modes(key)) do
           sources[mode .. "\0" .. normalized_lhs] = plugin.name or plugin_name
