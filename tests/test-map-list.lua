@@ -201,6 +201,56 @@ T["maps.collect returns sorted rows with buffer markers and fallback sources"] =
   end)
 end
 
+T["maps.collect collapses identical mappings across modes"] = function()
+  local rows = child.lua([[
+    local maps = require("map-list.maps")
+    local callback = function() end
+
+    for _, mode in ipairs({ "n", "s", "v", "x" }) do
+      vim.keymap.set(mode, "maplistcollectmodes", callback, {
+        desc = "Map List Collect Modes",
+      })
+    end
+
+    return maps.collect({
+      raw = "maplistcollectmodes",
+      display = "maplistcollectmodes",
+      has_space = false,
+    }, {})
+  ]])
+
+  eq(#rows, 1)
+  eq(rows[1].mode, "nvxs")
+  eq(rows[1].lhs, "maplistcollectmodes")
+  eq(rows[1].desc, "Map List Collect Modes")
+end
+
+T["maps.collect can keep identical mappings split by mode"] = function()
+  local rows = child.lua([[
+    local maps = require("map-list.maps")
+    local callback = function() end
+
+    vim.keymap.set("n", "maplistcollectsplit", callback, {
+      desc = "Map List Collect Split",
+    })
+    vim.keymap.set("i", "maplistcollectsplit", callback, {
+      desc = "Map List Collect Split",
+    })
+
+    return maps.collect({
+      raw = "maplistcollectsplit",
+      display = "maplistcollectsplit",
+      has_space = false,
+    }, {
+      collapse_modes = false,
+    })
+  ]])
+
+  eq(#rows, 2)
+  eq(rows[1].mode, "i")
+  eq(rows[2].mode, "n")
+end
+
 T["maps.collect resolves package provider sources"] = function()
   local result = child.lua([[
     local maps = require("map-list.maps")

@@ -51,6 +51,7 @@ require("map-list").setup({
 	buffer_name = "Keymaps",
 	include_buffer_local = true,
 	buffer_local_marker = "@",
+	collapse_modes = true,
 	modes = { "n", "v", "x", "s", "o", "i", "c", "t" },
 	colors = {
 		min_normal_distance = 45,
@@ -71,6 +72,7 @@ Options:
 | `buffer_name`                    | `"Keymaps"`                                  | Scratch buffer name.                                                                                                      |
 | `include_buffer_local`           | `true`                                       | Include mappings local to the current buffer.                                                                             |
 | `buffer_local_marker`            | `"@"`                                        | Suffix added to the mode label for buffer-local mappings.                                                                 |
+| `collapse_modes`                 | `true`                                       | Collapse identical mappings across modes into one row with a combined mode label.                                         |
 | `modes`                          | `{ "n", "v", "x", "s", "o", "i", "c", "t" }` | Ordered modes to collect. Entries can be mode strings such as `"n"`, or tables such as `{ key = "n", label = "normal" }`. |
 | `colors.min_normal_distance`     | `45`                                         | Minimum RGB distance between a plugin color and the active `Normal` foreground.                                           |
 | `colors.min_comment_distance`    | `35`                                         | Minimum RGB distance between a plugin color and the active `Comment` foreground.                                          |

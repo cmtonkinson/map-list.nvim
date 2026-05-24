@@ -12,6 +12,7 @@ local defaults = {
   buffer_name = "Keymaps",
   include_buffer_local = true,
   buffer_local_marker = "@",
+  collapse_modes = true,
   modes = { "n", "v", "x", "s", "o", "i", "c", "t" },
   colors = {
     min_normal_distance = 45,

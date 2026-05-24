@@ -57,11 +57,21 @@ local function map_source(map, mode, source_context)
 end
 
 --- Adds one collected keymap row to the result list.
-local function append_map(rows, map, mode_label, mode_key, source_context)
+local function append_map(
+  rows,
+  map,
+  mode_label,
+  mode_suffix,
+  mode_key,
+  source_context
+)
   local source, source_kind = map_source(map, mode_key, source_context)
 
   table.insert(rows, {
-    mode = mode_label,
+    mode = mode_label .. mode_suffix,
+    mode_label = mode_label,
+    mode_labels = { [mode_label] = true },
+    mode_suffix = mode_suffix,
     lhs = keys.display_lhs(map.lhs),
     desc = map.desc or "",
     source = source,
@@ -69,7 +79,35 @@ local function append_map(rows, map, mode_label, mode_key, source_context)
   })
 end
 
---- Sorts rows by lhs, then exact lhs text, then mode.
+--- Collapses identical mappings across modes into one row.
+local function collapse_rows(rows)
+  local collapsed = {}
+  local by_key = {}
+
+  for _, row in ipairs(rows) do
+    local key = table.concat({
+      row.lhs,
+      row.desc,
+      row.source,
+      row.source_kind,
+      row.mode_suffix,
+    }, "\0")
+    local existing = by_key[key]
+
+    if existing == nil then
+      by_key[key] = row
+      table.insert(collapsed, row)
+    elseif not existing.mode_labels[row.mode_label] then
+      existing.mode_labels[row.mode_label] = true
+      existing.mode_label = existing.mode_label .. row.mode_label
+      existing.mode = existing.mode_label .. existing.mode_suffix
+    end
+  end
+
+  return collapsed
+end
+
+--- Sorts rows by lhs, then exact lhs text, then collected mode label.
 local function sort_rows(rows)
   table.sort(rows, function(a, b)
     local a_lhs = sort_key(a.lhs)
@@ -109,7 +147,7 @@ function M.collect(filter, config)
 
     for _, map in ipairs(vim.api.nvim_get_keymap(mode_key)) do
       if include_map(map, filter) then
-        append_map(rows, map, mode_label, mode_key, source_context)
+        append_map(rows, map, mode_label, "", mode_key, source_context)
       end
     end
 
@@ -119,13 +157,18 @@ function M.collect(filter, config)
           append_map(
             rows,
             map,
-            mode_label .. buffer_local_marker,
+            mode_label,
+            buffer_local_marker,
             mode_key,
             source_context
           )
         end
       end
     end
+  end
+
+  if config.collapse_modes ~= false then
+    rows = collapse_rows(rows)
   end
 
   sort_rows(rows)
