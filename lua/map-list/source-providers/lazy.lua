@@ -3,6 +3,25 @@ local plugin_path = require("map-list.source-providers.plugin-path")
 
 local M = {}
 
+--- Resolves lazy.nvim key specs into an iterable list.
+local function key_specs(plugin)
+  local specs = plugin.keys
+
+  if type(specs) == "function" then
+    specs = specs(plugin, {})
+  end
+
+  if type(specs) == "string" then
+    return { specs }
+  end
+
+  if type(specs) == "table" then
+    return specs
+  end
+
+  return {}
+end
+
 --- Expands a lazy.nvim key spec mode into Neovim map modes.
 local function key_modes(key)
   local mode = key.mode or "n"
@@ -45,7 +64,11 @@ function M.context()
       dir = plugin.dir,
     })
 
-    for _, key in ipairs(plugin.keys or {}) do
+    for _, key in ipairs(key_specs(plugin)) do
+      if type(key) == "string" then
+        key = { key }
+      end
+
       local lhs = key[1]
       if type(lhs) == "string" then
         local normalized_lhs = keys.normalize_lhs(lhs)
