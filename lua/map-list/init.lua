@@ -34,11 +34,30 @@ local function normalize_filter(filter)
     return nil
   end
 
+  -- Plugin filter: case-insensitive substring against the resolved plugin
+  -- name. Bare "@" matches every plugin-attributed mapping.
+  if filter:sub(1, 1) == "@" then
+    return {
+      kind = "plugin",
+      query = filter:sub(2):lower(),
+    }
+  end
+
+  -- Ex-command filter: case-sensitive substring against the RHS Ex command
+  -- name. Bare ":" matches every mapping whose RHS invokes an Ex command.
+  if filter:sub(1, 1) == ":" then
+    return {
+      kind = "command",
+      query = filter:sub(2),
+    }
+  end
+
   local display = filter:lower()
 
   filter = keys.expand_lhs(filter)
 
   return {
+    kind = "default",
     display = display,
     has_space = filter:find(" ", 1, true) ~= nil,
     raw = filter:lower(),

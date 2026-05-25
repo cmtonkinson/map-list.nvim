@@ -216,7 +216,10 @@ local function parse_rhs_plug_map(rhs)
   return rhs:match("^(<Plug>%b())")
 end
 
---- Deduplicates plugin directories before building path indexes.
+--- Deduplicates plugin directories and orders them most-specific-first so
+--- prefix matching follows the longest-prefix rule when one plugin dir is
+--- nested inside another (e.g. a dev plugin whose dir contains the lazy
+--- install root for the other plugins).
 local function dedupe_plugins(plugins)
   local result = {}
   local seen = {}
@@ -231,6 +234,10 @@ local function dedupe_plugins(plugins)
       seen[dir] = true
     end
   end
+
+  table.sort(result, function(a, b)
+    return #a.dir > #b.dir
+  end)
 
   return result
 end
