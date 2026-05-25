@@ -5,12 +5,28 @@ local source_registry = require("map-list.source-registry")
 local M = {}
 local default_modes = { "n", "v", "x", "s", "o", "i", "c", "t" }
 
---- Checks whether a keymap matches the current filter.
-local function include_map(map, filter)
-  if filter == nil then
-    return true
+--- Extracts the leading Ex command name from a string rhs, or nil if the rhs
+--- does not invoke one. Recognizes `<Cmd>X<CR>` and `:X<CR>` shapes; built-in
+--- and user commands are both accepted, so the leading letter may be lower
+--- or upper case.
+local function parse_ex_command(rhs)
+  if rhs == nil or rhs == "" then
+    return nil
   end
 
+  local stripped = rhs:gsub("^%s+", "")
+  stripped = stripped:gsub("^<Cmd>", ":", 1)
+  stripped = stripped:gsub("^<cmd>", ":", 1)
+
+  if stripped:sub(1, 1) ~= ":" then
+    return nil
+  end
+
+  return stripped:match("^:%s*([%a_][%w_]*)")
+end
+
+--- Default filter: substring/prefix match against lhs, then desc and rhs.
+local function include_default(map, filter)
   local lhs = (map.lhs or ""):lower()
   local lhs_display = keys.display_lhs(map.lhs or ""):lower()
 
@@ -34,6 +50,54 @@ local function include_map(map, filter)
 
   return haystack:find(filter.raw, 1, true) ~= nil
     or haystack:find(filter.display, 1, true) ~= nil
+end
+
+--- Plugin filter: keeps rows attributed to a plugin and substring-matches the
+--- plugin name case-insensitively. Bare "@" (empty query) accepts every
+--- plugin-attributed row.
+local function include_plugin(filter, source, source_kind)
+  if source_kind ~= "plugin" then
+    return false
+  end
+
+  if filter.query == "" then
+    return true
+  end
+
+  return source:lower():find(filter.query, 1, true) ~= nil
+end
+
+--- Ex-command filter: keeps rows whose RHS invokes an Ex command and
+--- substring-matches the command name case-sensitively. Bare ":" (empty
+--- query) accepts every row with an Ex-command RHS.
+local function include_command(map, filter)
+  local command = parse_ex_command(map.rhs)
+  if command == nil then
+    return false
+  end
+
+  if filter.query == "" then
+    return true
+  end
+
+  return command:find(filter.query, 1, true) ~= nil
+end
+
+--- Checks whether a keymap matches the current filter.
+local function include_map(map, filter, source, source_kind)
+  if filter == nil then
+    return true
+  end
+
+  if filter.kind == "plugin" then
+    return include_plugin(filter, source, source_kind)
+  end
+
+  if filter.kind == "command" then
+    return include_command(map, filter)
+  end
+
+  return include_default(map, filter)
 end
 
 --- Builds a case-aware sort key that orders lowercase before uppercase.
@@ -64,10 +128,9 @@ local function append_map(
   mode_label,
   mode_suffix,
   mode_key,
-  source_context
+  source,
+  source_kind
 )
-  local source, source_kind = map_source(map, mode_key, source_context)
-
   table.insert(rows, {
     mode = mode_label .. mode_suffix,
     mode_label = mode_label,
@@ -149,21 +212,26 @@ function M.collect(filter, config)
     local mode_key, mode_label = mode_spec(mode)
 
     for _, map in ipairs(vim.api.nvim_get_keymap(mode_key)) do
-      if include_map(map, filter) then
-        append_map(rows, map, mode_label, "", mode_key, source_context)
+      local source, source_kind = map_source(map, mode_key, source_context)
+
+      if include_map(map, filter, source, source_kind) then
+        append_map(rows, map, mode_label, "", mode_key, source, source_kind)
       end
     end
 
     if config.include_buffer_local ~= false then
       for _, map in ipairs(vim.api.nvim_buf_get_keymap(current_buf, mode_key)) do
-        if include_map(map, filter) then
+        local source, source_kind = map_source(map, mode_key, source_context)
+
+        if include_map(map, filter, source, source_kind) then
           append_map(
             rows,
             map,
             mode_label,
             buffer_local_marker,
             mode_key,
-            source_context
+            source,
+            source_kind
           )
         end
       end
