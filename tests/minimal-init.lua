@@ -7,6 +7,7 @@ require("mini.test").setup({
       return {
         "tests/test-map-list.lua",
         "tests/test-source-providers.lua",
+        "tests/test-regressions.lua",
       }
     end,
   },
