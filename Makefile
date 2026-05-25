@@ -1,4 +1,4 @@
-.PHONY: deps test fmt lint
+.PHONY: deps test test-verbose fmt lint
 
 deps:
 	@if [ ! -d .deps/mini.nvim ]; then \
@@ -8,6 +8,9 @@ deps:
 
 test: deps
 	nvim --clean --headless -u tests/minimal-init.lua -c "lua MiniTest.run()"
+
+test-verbose: deps
+	nvim --clean --headless -u tests/minimal-init.lua -c "lua MiniTest.run({ execute = { reporter = MiniTest.gen_reporter.stdout({ group_depth = 2 }) } })"
 
 fmt:
 	stylua .
