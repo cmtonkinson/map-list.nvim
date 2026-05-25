@@ -1,4 +1,5 @@
 {
+  "diagnostics.globals": ["MiniTest"],
   "workspace.ignoreDir": [
     ".git",
     ".deps",

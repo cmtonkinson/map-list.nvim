@@ -1,5 +1,9 @@
 local helpers = require("tests.helpers")
 local child = helpers.child
+local map_lines = helpers.map_lines
+local contains = helpers.contains
+local rejects = helpers.rejects
+local expect_match = helpers.expect_match
 local eq = MiniTest.expect.equality
 
 local T = MiniTest.new_set({
@@ -15,64 +19,6 @@ local T = MiniTest.new_set({
     post_once = child.stop,
   },
 })
-
-local function map_lines(command)
-  return child.lua(
-    [[
-    local command = ...
-
-    vim.cmd(command)
-    local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-
-    if vim.bo.buftype == "nofile" then
-      vim.cmd("bwipeout!")
-    end
-
-    return lines
-  ]],
-    { command }
-  )
-end
-
-local function contains(lines, needle)
-  for _, line in ipairs(lines) do
-    if line:find(needle, 1, true) ~= nil then
-      return line
-    end
-  end
-
-  error(
-    ("expected lines to contain %s\n%s"):format(
-      vim.inspect(needle),
-      table.concat(lines, "\n")
-    )
-  )
-end
-
-local function rejects(lines, needle)
-  for _, line in ipairs(lines) do
-    if line:find(needle, 1, true) ~= nil then
-      error(
-        ("expected lines not to contain %s\n%s"):format(
-          vim.inspect(needle),
-          table.concat(lines, "\n")
-        )
-      )
-    end
-  end
-end
-
-local function expect_match(value, pattern)
-  if value:match(pattern) == nil then
-    error(
-      ("expected %s to match %s"):format(
-        vim.inspect(value),
-        vim.inspect(pattern)
-      ),
-      2
-    )
-  end
-end
 
 T["lazy provider attributes matching key specs to plugins"] = function()
   child.lua([[
