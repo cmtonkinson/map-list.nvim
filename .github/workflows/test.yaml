@@ -25,4 +25,4 @@ jobs:
         run: |
           make deps
           make lint
-          make test
+          make test-verbose
