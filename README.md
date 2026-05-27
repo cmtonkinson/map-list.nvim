@@ -156,6 +156,27 @@ order and using the first one that produces a value.
 | 3     | Right-hand side | Command/string RHS fallback.                                   |
 
 ------------------------------------------------------------------------
+## Telescope
+If Telescope is installed, `map-list.nvim` is available as
+`:Telescope map_list`. Telescope can lazy-load the picker on demand, but loading
+the extension explicitly makes command completion available immediately:
+```lua
+{
+	"cmtonkinson/map-list.nvim",
+	dependencies = { "nvim-telescope/telescope.nvim" },
+	config = function()
+		require("map-list").setup()
+		require("telescope").load_extension("map_list")
+	end,
+}
+```
+
+Then open the picker with:
+```vim
+:Telescope map_list
+```
+
+------------------------------------------------------------------------
 ## Testing
 Run the headless test suite from the repository root:
 ```sh

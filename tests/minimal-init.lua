@@ -9,6 +9,7 @@ require("mini.test").setup({
         "tests/test-source-providers.lua",
         "tests/test-regressions.lua",
         "tests/test-filter-prefixes.lua",
+        "tests/test-telescope.lua",
       }
     end,
   },

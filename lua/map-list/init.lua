@@ -66,8 +66,17 @@ end
 
 --- Renders the keymap list for the current command invocation.
 function M.show(opts)
-  local filter = normalize_filter(opts and opts.args or nil)
-  render.open(maps.collect(filter, state.config), state.config)
+  render.open(M.rows(opts and opts.args or nil), state.config)
+end
+
+--- Collects keymap rows using the active map-list configuration.
+function M.rows(filter)
+  return maps.collect(normalize_filter(filter), state.config)
+end
+
+--- Returns the active map-list configuration.
+function M.config()
+  return state.config
 end
 
 --- Configures map-list and creates the user command.

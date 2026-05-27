@@ -20,6 +20,8 @@ common.setup_basics()
 
 vim.fn["plug#begin"](vim.fn.stdpath("data") .. "/plugged")
 vim.cmd("Plug " .. vim.fn.string(repo))
+vim.cmd("Plug 'nvim-lua/plenary.nvim'")
+vim.cmd("Plug 'nvim-telescope/telescope.nvim'")
 vim.cmd("Plug 'FabijanZulj/blame.nvim'")
 vim.cmd("Plug 'RRethy/nvim-align'")
 vim.cmd("Plug 'numToStr/Comment.nvim'")

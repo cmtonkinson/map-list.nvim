@@ -34,6 +34,8 @@ packer.init({
 packer.startup(function(use)
   use("wbthomason/packer.nvim")
   use(repo)
+  use("nvim-lua/plenary.nvim")
+  use("nvim-telescope/telescope.nvim")
   use("FabijanZulj/blame.nvim")
   use("RRethy/nvim-align")
   use("numToStr/Comment.nvim")
@@ -44,6 +46,8 @@ end)
 
 for _, plugin in ipairs({
   "nightfox.nvim",
+  "plenary.nvim",
+  "telescope.nvim",
   "nvim-align",
   "blame.nvim",
   "Comment.nvim",
@@ -57,6 +61,8 @@ for _, plugin in ipairs({
 end
 
 vim.cmd.runtime("plugin/map-list.lua")
+vim.cmd.runtime("plugin/plenary.vim")
+vim.cmd.runtime("plugin/telescope.lua")
 vim.cmd.runtime("plugin/align.vim")
 vim.cmd.runtime("plugin/comment.lua")
 vim.cmd.runtime("plugin/fugitive.vim")

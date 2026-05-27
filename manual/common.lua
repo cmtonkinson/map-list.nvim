@@ -50,6 +50,9 @@ function M.setup_plugin_keymaps()
 
   local function setup_map_list()
     require("map-list").setup()
+    pcall(function()
+      require("telescope").load_extension("map_list")
+    end)
   end
 
   pcall(setup_map_list)
@@ -63,8 +66,14 @@ function M.setup_plugin_keymaps()
   vim.keymap.set("n", "<leader>ml", "<cmd>Map <lt>leader><CR>", {
     desc = "List leader keymaps",
   })
+  vim.keymap.set("n", "<leader>mt", "<cmd>Telescope map_list<CR>", {
+    desc = "List keymaps in Telescope",
+  })
   vim.keymap.set("x", "<leader>a", ":Align =<CR>", {
     desc = "Align selection on equals",
+  })
+  vim.keymap.set("n", "<leader>pf", "<cmd>Telescope find_files<CR>", {
+    desc = "Find files",
   })
 
   vim.keymap.set("n", "<leader>bb", "<cmd>BlameToggle<CR>", {

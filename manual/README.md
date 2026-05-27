@@ -13,6 +13,8 @@ From the repository root:
 Each launcher installs or syncs these plugins through that profile's plugin
 manager before opening Neovim:
 - local `map-list.nvim` from this checkout
+- `nvim-lua/plenary.nvim`
+- `nvim-telescope/telescope.nvim`
 - `FabijanZulj/blame.nvim`
 - `RRethy/nvim-align`
 - `numToStr/Comment.nvim`
@@ -31,7 +33,9 @@ Each profile also sets these built-in mappings:
 
 Each profile maps the same plugin commands:
 - `<leader>ml` to `:Map <leader>`
+- `<leader>mt` to `:Telescope map_list`
 - `<leader>a` in visual mode to `:Align =`
+- `<leader>pf` to `:Telescope find_files`
 - `<leader>bb` to `:BlameToggle`
 - `<leader>bv` to `:BlameToggle virtual`
 - `<leader>bw` to `:BlameToggle window`
